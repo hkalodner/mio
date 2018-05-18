@@ -125,7 +125,7 @@ struct mmap_context
 inline mmap_context memory_map(const file_handle_type file_handle, const int64_t offset,
     const int64_t length, const access_mode mode, std::error_code& error)
 {
-    const int64_t aligned_offset = make_offset_page_aligned(offset);
+    const int64_t aligned_offset = static_cast<int64_t>(make_offset_page_aligned(static_cast<size_t>(offset)));
     const int64_t length_to_map = offset - aligned_offset + length;
 #ifdef _WIN32
     const int64_t max_file_size = offset + length;
@@ -146,7 +146,7 @@ inline mmap_context memory_map(const file_handle_type file_handle, const int64_t
         mode == access_mode::read ? FILE_MAP_READ : FILE_MAP_WRITE,
         int64_high(aligned_offset),
         int64_low(aligned_offset),
-        length_to_map));
+        static_cast<size_t>(length_to_map)));
     if(mapping_start == nullptr)
     {
         error = last_error();
@@ -154,8 +154,8 @@ inline mmap_context memory_map(const file_handle_type file_handle, const int64_t
     }
 #else
     char* mapping_start = static_cast<char*>(::mmap(
-        0, // Don't give hint as to where to map.
-        length_to_map,
+        nullptr, // Don't give hint as to where to map.
+        static_cast<size_t>(length_to_map),
         mode == access_mode::read ? PROT_READ : PROT_WRITE,
         MAP_SHARED,
         file_handle,
@@ -187,9 +187,9 @@ basic_mmap<ByteT>::~basic_mmap()
 template<typename ByteT>
 basic_mmap<ByteT>::basic_mmap(basic_mmap<ByteT>&& other)
     : data_(std::move(other.data_))
+    , file_handle_(std::move(other.file_handle_))
     , length_(std::move(other.length_))
     , mapped_length_(std::move(other.mapped_length_))
-    , file_handle_(std::move(other.file_handle_))
 #ifdef _WIN32
     , file_mapping_handle_(std::move(other.file_mapping_handle_))
 #endif
@@ -351,7 +351,7 @@ void basic_mmap<ByteT>::unmap()
         file_mapping_handle_ = INVALID_HANDLE_VALUE;
     }
 #else
-    if(data_) { ::munmap(const_cast<pointer>(get_mapping_start()), mapped_length_); }
+    if(data_) { ::munmap(const_cast<pointer>(get_mapping_start()), static_cast<size_t>(mapped_length_)); }
 #endif
 
     // If file_handle_ was obtained by our opening it (when map is called with a path,

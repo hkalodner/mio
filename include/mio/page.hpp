@@ -46,9 +46,9 @@ inline size_t page_size()
 #ifdef _WIN32
         SYSTEM_INFO SystemInfo;
         GetSystemInfo(&SystemInfo);
-        return SystemInfo.dwAllocationGranularity;
+        return static_cast<size_t>(SystemInfo.dwAllocationGranularity);
 #else
-        return sysconf(_SC_PAGE_SIZE);
+        return static_cast<size_t>(sysconf(_SC_PAGE_SIZE));
 #endif
     }();
     return page_size;
